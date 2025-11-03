@@ -1,0 +1,115 @@
+services:
+  redis:
+    image: redis:8.2.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ~/stock-app/redis:/data
+    networks:
+      - local-network
+
+  kafka:
+    image: apache/kafka:4.1.0
+    container_name: kafka
+    ports:
+      - "9092:9092"     # Kafka client port
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+    volumes:
+      - ~/stock-app/kafka:/var/lib/kafka/data
+    networks:
+      - local-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment/Dockerfile
+    image: me/payment:latest
+    container_name: payment
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - redis
+      - kafka
+    volumes:
+      - ~/stock-app/payment:/opt/app/logs          # persist app logs
+    networks:
+      - local-network
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory/Dockerfile
+    image: me/inventory:latest
+    container_name: inventory
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - redis
+      - kafka
+    volumes:
+      - ~/stock-app/inventory:/opt/app/logs          # persist app logs
+      - ~/stock-app/inventory:/opt/app/inventory
+    networks:
+      - local-network
+
+  orchestration-service:
+    build:
+      context: .
+      dockerfile: orchestration/Dockerfile
+    image: me/orchestration:latest
+    container_name: orchestration
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - redis
+      - kafka
+    volumes:
+      - ~/stock-app/orchestration:/app/logs          # persist app logs
+      - ~/stock-app/orchestration:/opt/app/orchestration
+    networks:
+      - local-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order/Dockerfile
+    image: me/order:latest
+    container_name: order
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - redis
+      - kafka
+    volumes:
+      - ~/stock-app/order:/app/logs          # persist app logs
+    networks:
+      - local-network
+
+networks:
+  local-network:
+    name: saga-orchestration-network

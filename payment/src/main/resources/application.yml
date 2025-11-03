@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: payment
+  kafka:
+    bootstrap-servers: localhost:9092
+  jpa:
+    properties:
+      jdbc:
+        time_zone: UTC
+  jackson:
+    time-zone: UTC
+logging:
+  level:
+    # kafka
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN
+    kafka: WARN

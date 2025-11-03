@@ -1,0 +1,41 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: Inventory
+  kafka:
+    bootstrap-servers: localhost:9092
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  datasource:
+    url: jdbc:h2:file:./inventory/inv-db;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: password
+    driverClassName: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: false
+        use_sql_comments: true
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  jackson:
+    time-zone: UTC
+logging:
+  level:
+    # Hibernate SQL queries
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.stat: DEBUG
+    org.springframework.data.repository.query: DEBUG
+    # kafka
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN
+    kafka: WARN

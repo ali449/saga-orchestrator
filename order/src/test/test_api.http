@@ -1,0 +1,7 @@
+POST localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "stockId": "apple-123",
+  "quantity": 10
+}

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Workflow Tracker</title>
+
+  <!-- Tailwind & Flowbite -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/flowbite@2.5.1/dist/flowbite.min.js"></script>
+
+  <!-- SockJS, STOMP & Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+
+<body class="bg-slate-900 text-slate-100 p-8">
+<div class="max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold mb-4 text-indigo-400">Order Workflow Tracker</h1>
+
+  <div class="flex items-center gap-3 mb-6">
+    <input id="stockId" type="text" placeholder="Stock ID"
+           class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm" value="apple-123" />
+    <input id="quantity" type="number" placeholder="Quantity"
+           class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm" value="10" />
+    <button onclick="createOrder()"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold">
+      Create Order
+    </button>
+  </div>
+
+  <div id="orderCard" class="hidden bg-slate-800 rounded-xl p-5 shadow-lg">
+    <h2 class="text-lg font-semibold mb-2">Order ID: <span id="orderId" class="font-mono"></span></h2>
+    <p class="text-sm mb-4">Overall Status:
+      <span id="orderStatus" class="font-semibold text-indigo-400"></span>
+    </p>
+    <div id="workflow" class="flex flex-col gap-3"></div>
+  </div>
+</div>
+
+<script>
+  let stompClient = null;
+  let currentOrderId = null;
+
+  async function createOrder() {
+    const stockId = document.getElementById("stockId").value;
+    const quantity = parseInt(document.getElementById("quantity").value);
+    try {
+      const response = await axios.post("http://localhost:8081/api/orders", { stockId, quantity });
+      const order = response.data;
+      currentOrderId = order.id;
+      document.getElementById("orderId").textContent = currentOrderId;
+      document.getElementById("orderCard").classList.remove("hidden");
+      connectWebSocket(currentOrderId);
+    } catch (err) {
+      alert("Failed to create order: " + err);
+    }
+  }
+
+  function connectWebSocket(orderId) {
+    const socket = new SockJS("http://localhost:8081/ws");
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, () => {
+      stompClient.subscribe(`/topic/orders/${orderId}`, (message) => {
+        const data = JSON.parse(message.body);
+        renderWorkflow(data);
+      });
+    });
+  }
+
+  function renderWorkflow(data) {
+    const workflow = document.getElementById("workflow");
+    workflow.innerHTML = "";
+    document.getElementById("orderStatus").textContent = data.status;
+
+    const sortedSteps = data.steps.sort((a, b) => a.stepOrder - b.stepOrder);
+    sortedSteps.forEach(step => {
+      const color = {
+        COMPLETED: "bg-green-600",
+        IN_PROGRESS: "bg-blue-600",
+        COMPENSATED: "bg-yellow-500",
+        FAILED: "bg-red-600",
+      }[step.status] || "bg-slate-600";
+
+      const el = document.createElement("div");
+      el.className = `flex items-center justify-between p-3 rounded-lg border border-slate-700 ${color} bg-opacity-20`;
+      el.innerHTML = `
+        <div>
+          <p class="font-semibold">${step.stepOrder}. ${step.name}</p>
+          <p class="text-xs text-slate-400">Retries: ${step.retryCount}</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-bold ${color} text-white">
+          ${step.status}
+        </span>
+      `;
+      workflow.appendChild(el);
+    });
+  }
+</script>
+</body>
+</html>

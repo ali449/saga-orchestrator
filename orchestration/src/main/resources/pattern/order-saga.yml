@@ -1,0 +1,21 @@
+name: OrderStockSaga
+version: 1
+triggerEventType: OrderCreatedEvent
+steps:
+  - name: Reserve Stock
+    commandType: ReserveStockCommand
+    commandTopic: inventory-commands
+    expectedEventType: StockReservedEvent
+    onFailureCommand: ReleaseStockCommand
+    timeoutSeconds: 30
+  - name: Process Payment
+    commandType: ProcessPaymentCommand
+    commandTopic: payment-commands
+    expectedEventType: PaymentSucceededEvent
+    onFailureCommand: RefundPaymentCommand
+    timeoutSeconds: 30
+  - name: Complete Order
+    commandType: CompleteOrderCommand
+    commandTopic: order-commands
+    expectedEventType: OrderCompletedEvent
+    timeoutSeconds: 30

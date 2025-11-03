@@ -1,0 +1,22 @@
+POST localhost:8082/api/stocks
+Content-Type: application/json
+
+{
+  "name": "apple-123",
+  "quantity": 20
+}
+
+###
+
+GET localhost:8082/api/stocks/apple-123
+Accept: application/json
+Content-Type: application/json
+
+###
+
+
+DELETE localhost:8082/api/stocks/apple-123
+Accept: application/json
+Content-Type: application/json
+
+###
