@@ -10,13 +10,7 @@ To showcase the orchestration system in action, an example domain â€” **Order â†
 This system is composed of multiple Spring Boot microservices that communicate asynchronously through Kafka topics.  
 The **Orchestrator Service** manages workflow states, triggers compensations when necessary, and keeps the overall process consistent.
 
-```mermaid
-flowchart LR
-    A[Web UI] <--> B[Order Service]
-    B <--> C[Orchestrator]
-    C <--> D[Inventory]
-    C <--> E[Payment]
-```
+![SAGA Overview](overview.jpg)
 * All communication between services occurs through Kafka topics.
 * Orchestrator service drives the process using a dynamic SAGA definition (workflow steps and compensations).
 * Redis is used both as:
